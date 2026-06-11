@@ -1,0 +1,7 @@
+.env
+anemia_model.pkl
+hacka.pdf
+medical_dataset.xlsx
+sampleReport.pdf
+venv/
+__pycache__/
