@@ -124,9 +124,9 @@ export default function Dashboard() {
           {/* Card 1: Overview */}
           <motion.div variants={itemVariants} className="lg:col-span-2">
             <OverviewCard
-              condition={data.overview?.condition || data.condition_summary || "Unknown"}
+              condition={data.primary_analysis.title}
               severity={data.severity}
-              summary={data.condition_summary}
+              summary={data.primary_analysis.summary}
             />
           </motion.div>
 

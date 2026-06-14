@@ -43,6 +43,7 @@ export interface MedicalReportData {
   condition_summary?: string;
   severity?: string;
   abnormal_findings?: AbnormalFinding[];
+  normal_findings?: AbnormalFinding[];
   health_impact?: string[];
   recommended_specialist?: Specialist;
   next_steps?: string[];
@@ -52,6 +53,10 @@ export interface MedicalReportData {
   warning_signs?: string[];
   follow_up_tests?: string[];
   final_summary?: string[];
+  primary_analysis?: {
+    title: string;
+    summary: string;
+  };
 
   // Support for actual Python backend LLM schema
   overview?: {
@@ -82,6 +87,12 @@ export function normalizeReportData(data: MedicalReportData): Required<MedicalRe
   const severity = data.severity || overview.severity || "Normal";
   
   const abnormal_findings = data.abnormal_findings || [];
+  const normal_findings = data.normal_findings || [];
+  
+  const primary_analysis = data.primary_analysis || {
+    title: overview.condition || condition_summary,
+    summary: condition_summary
+  };
   
   const health_impact = data.health_impact || data.health_effects || data.quick_summary || [];
   
@@ -125,6 +136,8 @@ export function normalizeReportData(data: MedicalReportData): Required<MedicalRe
     condition_summary,
     severity,
     abnormal_findings,
+    normal_findings,
+    primary_analysis,
     health_impact,
     recommended_specialist: normalizedSpecialist,
     next_steps,

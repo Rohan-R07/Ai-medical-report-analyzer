@@ -74,213 +74,335 @@ class Backend:
 
         features = {
             "WBC": [
+                r"Total WBC count\s+\d+\s+(\d+\.?\d*)",
                 r"Total WBC count\s+(\d+\.?\d*)",
                 r"WBC\s+\d+\s+(\d+\.?\d*)",
                 r"WBC\s+(\d+\.?\d*)",
             ],
             "RBC": [
+                r"Total RBC count\s+\d+\s+(\d+\.?\d*)",
                 r"Total RBC count\s+(\d+\.?\d*)",
                 r"RBC\s+\d+\s+(\d+\.?\d*)",
                 r"RBC\s+(\d+\.?\d*)",
             ],
             "HGB": [
+                r"Hemoglobin\s*\(Hb\)\s+\d+\s+(\d+\.?\d*)",
                 r"Hemoglobin\s*\(Hb\)\s+(\d+\.?\d*)",
                 r"Hemoglobin\s+\d+\s+(\d+\.?\d*)",
                 r"Hemoglobin\s+(\d+\.?\d*)",
+                r"HGB\s+\d+\s+(\d+\.?\d*)",
+                r"HGB\s+(\d+\.?\d*)",
             ],
             "HCT": [
+                r"Hematocrit\s*\(HCT\)\s+\d+\s+(\d+\.?\d*)",
                 r"Hematocrit\s*\(HCT\)\s+(\d+\.?\d*)",
+                r"Hematocrit\s+\d+\s+(\d+\.?\d*)",
                 r"Hematocrit\s+(\d+\.?\d*)",
+                r"Packed Cell Volume\s*\(PCV\)\s+\d+\s+(\d+\.?\d*)",
+                r"Packed Cell Volume\s*\(PCV\)\s+(\d+\.?\d*)",
+                r"PCV\s+\d+\s+(\d+\.?\d*)",
+                r"PCV\s+(\d+\.?\d*)",
                 r"HCT\s+\d+\s+(\d+\.?\d*)",
                 r"HCT\s+(\d+\.?\d*)",
-                r"Packed Cell Volume\s*\(PCV\)\s+(\d+\.?\d*)",
-                r"PCV\s+(\d+\.?\d*)",
             ],
             "MCV": [
-                r"MCV\)?\s+(\d+\.?\d*)",
+                r"Mean Corpuscular Volume\s*\(MCV\)\s+\d+\s+(\d+\.?\d*)",
                 r"Mean Corpuscular Volume\s*\(MCV\)\s+(\d+\.?\d*)",
+                r"MCV\s+\d+\s+(\d+\.?\d*)",
+                r"MCV\s+(\d+\.?\d*)",
             ],
-            "MCH": [r"MCH\s+(\d+\.?\d*)", r"MCH\s+\d+\s+(\d+\.?\d*)"],
-            "MCHC": [r"MCHC\s+(\d+\.?\d*)", r"MCHC\s+\d+\s+(\d+\.?\d*)"],
+            "MCH": [
+                r"Mean Corpuscular Hemoglobin\s+\d+\s+(\d+\.?\d*)",
+                r"Mean Corpuscular Hemoglobin\s+(\d+\.?\d*)",
+                r"MCH\s+\d+\s+(\d+\.?\d*)",
+                r"MCH\s+(\d+\.?\d*)",
+            ],
+            "MCHC": [
+                r"Mean Corpuscular Hemoglobin Concentration\s+\d+\s+(\d+\.?\d*)",
+                r"Mean Corpuscular Hemoglobin Concentration\s+(\d+\.?\d*)",
+                r"MCHC\s+\d+\s+(\d+\.?\d*)",
+                r"MCHC\s+(\d+\.?\d*)",
+            ],
+            "PLT": [
+                r"Platelet\s*Count\s+\d+\s+(\d+\.?\d*)",
+                r"Platelet\s*Count\s+(\d+\.?\d*)",
+                r"Platelets\s*\(PLT\)\s+\d+\s+(\d+\.?\d*)",
+                r"Platelets\s*\(PLT\)\s+(\d+\.?\d*)",
+                r"Platelets\s+\d+\s+(\d+\.?\d*)",
+                r"Platelets\s+(\d+\.?\d*)",
+                r"PLT\s+\d+\s+(\d+\.?\d*)",
+                r"PLT\s+(\d+\.?\d*)",
+            ],
         }
 
         for model_name, patterns in features.items():
             for pattern in patterns:
                 match = re.search(pattern, all_text, re.IGNORECASE)
                 if match:
-                    # If the match has multiple capture groups or matches inside brackets, grab the correct one
                     patient_data[model_name] = float(match.group(1))
                     print(f"{model_name} = {patient_data[model_name]}")
                     break
+
+        # Normalization of units for WBC and Platelets (PLT)
+        if "WBC" in patient_data:
+            val = patient_data["WBC"]
+            if val > 100.0:
+                patient_data["WBC"] = round(val / 1000.0, 2)
+                print(f"Normalized WBC: {val} -> {patient_data['WBC']}")
+
+        if "PLT" in patient_data:
+            val = patient_data["PLT"]
+            if val > 1000.0:
+                patient_data["PLT"] = round(val / 1000.0, 2)
+                print(f"Normalized PLT: {val} -> {patient_data['PLT']}")
 
         return patient_data
 
     def calculate_abnormal_findings(self, values):
         """
-        Calculates out-of-range metrics programmatically.
+        Calculates out-of-range metrics programmatically using reference_ranges.py.
         """
-        ranges = {
-            "WBC": {"min": 4.0, "max": 11.0, "name": "WBC"},
-            "RBC": {"min": 4.0, "max": 6.0, "name": "RBC"},
-            "HGB": {"min": 12.0, "max": 17.5, "name": "HGB"},
-            "HCT": {"min": 36.0, "max": 50.0, "name": "HCT"},
-            "MCV": {"min": 80.0, "max": 100.0, "name": "MCV"},
-            "MCH": {"min": 27.0, "max": 33.0, "name": "MCH"},
-            "MCHC": {"min": 32.0, "max": 36.0, "name": "MCHC"},
-        }
+        from reference_ranges import REFERENCE_RANGES
 
         findings = []
-        for key, ref in ranges.items():
+        for key, ref in REFERENCE_RANGES.items():
             if key in values:
                 val = values[key]
-                if val < ref["min"]:
+                if key == "PLT":
+                    # Special check for Platelets borderline low range
+                    if ref["borderline_min"] <= val <= ref["borderline_max"]:
+                        findings.append(
+                            {
+                                "parameter": ref["name"],
+                                "value": val,
+                                "status": "Borderline",
+                                "explanation": f"Platelet Count ({val}) is borderline low (normal: {ref['min']} - {ref['max']} {ref['unit']}).",
+                                "is_mild": True,
+                                "is_significant": False,
+                                "is_critical": False,
+                            }
+                        )
+                    elif val < ref["borderline_min"]:
+                        is_crit = val <= ref["critical_low"]
+                        findings.append(
+                            {
+                                "parameter": ref["name"],
+                                "value": val,
+                                "status": "Low",
+                                "explanation": f"Platelet Count ({val}) is below normal range ({ref['min']} - {ref['max']} {ref['unit']}).",
+                                "is_mild": False,
+                                "is_significant": not is_crit,
+                                "is_critical": is_crit,
+                            }
+                        )
+                    elif val > ref["max"]:
+                        is_crit = val >= ref["critical_high"]
+                        findings.append(
+                            {
+                                "parameter": ref["name"],
+                                "value": val,
+                                "status": "High",
+                                "explanation": f"Platelet Count ({val}) is above normal range ({ref['min']} - {ref['max']} {ref['unit']}).",
+                                "is_mild": False,
+                                "is_significant": not is_crit,
+                                "is_critical": is_crit,
+                            }
+                        )
+                else:
+                    # General CBC parameters
+                    if val < ref["min"]:
+                        is_crit = val <= ref["critical_low"]
+                        deviation_pct = (ref["min"] - val) / ref["min"]
+                        is_sig = deviation_pct > 0.15 and not is_crit
+                        findings.append(
+                            {
+                                "parameter": ref["name"],
+                                "value": val,
+                                "status": "Low",
+                                "explanation": f"{ref['full_name']} ({val}) is below normal range ({ref['min']} - {ref['max']} {ref['unit']}).",
+                                "is_mild": not is_sig and not is_crit,
+                                "is_significant": is_sig,
+                                "is_critical": is_crit,
+                            }
+                        )
+                    elif val > ref["max"]:
+                        is_crit = val >= ref["critical_high"]
+                        deviation_pct = (val - ref["max"]) / ref["max"]
+                        is_sig = deviation_pct > 0.15 and not is_crit
+                        findings.append(
+                            {
+                                "parameter": ref["name"],
+                                "value": val,
+                                "status": "High",
+                                "explanation": f"{ref['full_name']} ({val}) is above normal range ({ref['min']} - {ref['max']} {ref['unit']}).",
+                                "is_mild": not is_sig and not is_crit,
+                                "is_significant": is_sig,
+                                "is_critical": is_crit,
+                            }
+                        )
+        return findings
+
+    def calculate_normal_findings(self, values):
+        """
+        Calculates in-range metrics programmatically using reference_ranges.py.
+        """
+        from reference_ranges import REFERENCE_RANGES
+
+        findings = []
+        for key, ref in REFERENCE_RANGES.items():
+            if key in values:
+                val = values[key]
+                is_normal = False
+                if key == "PLT":
+                    if ref["min"] <= val <= ref["max"]:
+                        is_normal = True
+                else:
+                    if ref["min"] <= val <= ref["max"]:
+                        is_normal = True
+
+                if is_normal:
                     findings.append(
                         {
                             "parameter": ref["name"],
                             "value": val,
-                            "status": "Low",
-                            "explanation": f"{ref['name']} ({val}) is below the normal range ({ref['min']} - {ref['max']}).",
-                        }
-                    )
-                elif val > ref["max"]:
-                    findings.append(
-                        {
-                            "parameter": ref["name"],
-                            "value": val,
-                            "status": "High",
-                            "explanation": f"{ref['name']} ({val}) is above the normal range ({ref['min']} - {ref['max']}).",
+                            "status": "Normal",
+                            "explanation": f"{ref['full_name']} ({val}) is within normal range ({ref['min']} - {ref['max']} {ref['unit']}).",
                         }
                     )
         return findings
 
     def calculate_physiological_score(self, values):
         """
-        Subtracts points from 100 for deviations and returns a score and status category.
+        Subtracts points from 100 for deviations and returns score and status category using reference_ranges.py.
         """
+        from reference_ranges import REFERENCE_RANGES, get_health_status
+
         score = 100
-        deductions = {
-            "WBC": {"min": 4.0, "max": 11.0, "deduct_low": 5, "deduct_high": 5},
-            "RBC": {"min": 4.0, "max": 6.0, "deduct_low": 6, "deduct_high": 6},
-            "HGB": {"min": 12.0, "max": 17.5, "deduct_low": 8, "deduct_high": 8},
-            "HCT": {"min": 36.0, "max": 50.0, "deduct_low": 5, "deduct_high": 5},
-            "MCV": {"min": 80.0, "max": 100.0, "deduct_low": 5, "deduct_high": 5},
-            "MCH": {"min": 27.0, "max": 33.0, "deduct_low": 4, "deduct_high": 4},
-            "MCHC": {"min": 32.0, "max": 36.0, "deduct_low": 4, "deduct_high": 4},
-        }
-
-        for key, ref in deductions.items():
+        for key, ref in REFERENCE_RANGES.items():
             if key in values:
                 val = values[key]
-                if val < ref["min"]:
-                    score -= ref["deduct_low"]
-                elif val > ref["max"]:
-                    score -= ref["deduct_high"]
-
-        score = max(0, score)
-
-        if score >= 95:
-            category = "Excellent"
-        elif score >= 85:
-            category = "Good"
-        elif score >= 70:
-            category = "Fair"
-        elif score >= 50:
-            category = "Needs Attention"
-        else:
-            category = "High Risk"
-
-        return {"score": score, "category": category}
-
-    def calculate_severity(self, values):
-        """
-        Determines severity from abnormalities count and threshold ranges.
-        """
-        ranges = {
-            "WBC": {"normal": (4.0, 11.0), "critical_low": 2.0, "critical_high": 20.0},
-            "RBC": {"normal": (4.0, 6.0), "critical_low": 3.0, "critical_high": 7.0},
-            "HGB": {"normal": (12.0, 17.5), "critical_low": 8.0, "critical_high": 20.0},
-            "HCT": {
-                "normal": (36.0, 50.0),
-                "critical_low": 25.0,
-                "critical_high": 60.0,
-            },
-            "MCV": {
-                "normal": (80.0, 100.0),
-                "critical_low": 65.0,
-                "critical_high": 120.0,
-            },
-            "MCH": {
-                "normal": (27.0, 33.0),
-                "critical_low": 20.0,
-                "critical_high": 40.0,
-            },
-            "MCHC": {
-                "normal": (32.0, 36.0),
-                "critical_low": 28.0,
-                "critical_high": 40.0,
-            },
-        }
-
-        mild_count = 0
-        major_count = 0
-        critical_count = 0
-
-        for key, ref in ranges.items():
-            if key in values:
-                val = values[key]
-                norm_min, norm_max = ref["normal"]
-                if val < norm_min or val > norm_max:
-                    if val <= ref["critical_low"] or val >= ref["critical_high"]:
-                        critical_count += 1
-                    else:
-                        deviation_pct = (
-                            (norm_min - val) / norm_min
-                            if val < norm_min
-                            else (val - norm_max) / norm_max
-                        )
-                        if deviation_pct > 0.15:
-                            major_count += 1
+                if key == "PLT":
+                    if ref["borderline_min"] <= val <= ref["borderline_max"]:
+                        score -= ref["deduction_borderline"]
+                    elif val < ref["borderline_min"] or val > ref["max"]:
+                        if val <= ref["critical_low"] or val >= ref["critical_high"]:
+                            score -= ref["deduction_critical"]
                         else:
-                            mild_count += 1
+                            score -= ref["deduction_abnormal"]
+                else:
+                    if val < ref["min"] or val > ref["max"]:
+                        if val <= ref["critical_low"] or val >= ref["critical_high"]:
+                            score -= 15
+                        else:
+                            score -= ref["deduction"]
+        score = max(0, score)
+        return {"score": score, "category": get_health_status(score)}
+
+    def calculate_severity(self, arg):
+        """
+        Determines severity from abnormalities count and types (Mild, Moderate, Severe).
+        """
+        if isinstance(arg, dict):
+            abnormal_findings = self.calculate_abnormal_findings(arg)
+        else:
+            abnormal_findings = arg
+
+        critical_count = sum(1 for f in abnormal_findings if f.get("is_critical"))
+        significant_count = sum(1 for f in abnormal_findings if f.get("is_significant"))
 
         if critical_count > 0:
             return "Severe"
-        if major_count > 0:
-            return "Significant"
-        if mild_count > 1:
+        if significant_count >= 2:
             return "Moderate"
-        if mild_count == 1:
+
+        total_abnormalities = len(abnormal_findings)
+        if total_abnormalities >= 4:
+            return "Moderate"
+        elif total_abnormalities >= 1:
             return "Mild"
-        return "Normal"
+        else:
+            return "Normal"
 
     def calculate_health_status(self, score):
         """
-        Maps a physiological score to a health status rating.
+        Maps a physiological score to a health status rating using reference_ranges.py.
         """
-        if score >= 95:
-            return "Excellent"
-        elif score >= 85:
-            return "Good"
-        elif score >= 70:
-            return "Fair"
-        elif score >= 50:
-            return "Needs Monitoring"
-        else:
-            return "High Risk"
+        from reference_ranges import get_health_status
+
+        return get_health_status(score)
 
     def calculate_risk_level(self, severity):
         """
         Maps clinical severity to general risk levels.
         """
-        if severity in ["Severe"]:
+        if severity == "Severe":
             return "High"
-        elif severity in ["Significant", "Moderate"]:
+        elif severity == "Moderate":
             return "Moderate"
         else:
             return "Low"
 
+    def calculate_primary_analysis(self, prediction_name, severity, abnormal_findings):
+        """
+        Derives primary analysis programmatically based on prediction, severity, and findings.
+        """
+        has_abnormalities = len(abnormal_findings) > 0
+        is_normal_severity = severity == "Normal"
+
+        if not has_abnormalities and is_normal_severity:
+            return {
+                "title": "Normal",
+                "summary": "All blood parameters are within normal ranges.",
+            }
+
+        # Check for Hemoglobin Low in abnormal findings
+        has_low_hgb = any(
+            f.get("parameter") == "Hemoglobin" and f.get("status") == "Low"
+            for f in abnormal_findings
+        )
+
+        if severity == "Mild" or is_normal_severity:
+            if has_low_hgb:
+                has_pcv_high = any(
+                    f.get("parameter") == "PCV" and f.get("status") == "High"
+                    for f in abnormal_findings
+                )
+                if has_pcv_high:
+                    summary = "Mild abnormalities were detected including low hemoglobin and elevated PCV. Follow-up with a healthcare professional is recommended."
+                else:
+                    summary = "Mild abnormalities suggest possible anemia and should be monitored."
+                return {"title": "Possible Mild Anemia", "summary": summary}
+            else:
+                return {
+                    "title": "Mild Abnormalities Detected",
+                    "summary": "Some blood parameters are outside the normal range and may require follow-up.",
+                }
+
+        elif severity == "Moderate":
+            return {
+                "title": "Moderate Blood Abnormalities",
+                "summary": "Several parameters require medical review.",
+            }
+
+        elif severity == "Severe":
+            return {
+                "title": "Significant Blood Abnormalities",
+                "summary": "Immediate medical consultation is recommended.",
+            }
+
+        return {
+            "title": "Blood Abnormalities Detected",
+            "summary": "Abnormal blood parameters require review with a healthcare provider.",
+        }
+
     def generateExplaination(
-        self, prediction_name, values, severity, score, abnormal_findings
+        self,
+        prediction_name,
+        values,
+        severity,
+        score,
+        abnormal_findings,
+        normal_findings,
     ):
         hf_token = os.getenv("HF_TOKEN")
 
@@ -292,6 +414,7 @@ class Backend:
             Severity: {severity}
             Physiological Score: {score}
             Abnormal Findings: {abnormal_findings}
+            Normal Findings: {normal_findings}
             Blood Values: {values}
 
             You MUST explain these pre-calculated physiological values. 

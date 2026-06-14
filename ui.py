@@ -76,16 +76,26 @@ async def api_analyze(file: UploadFile = File(...)):
             prediction = backend.predict(sanitized_values)
             prediction_name = backend.getPredictionName(prediction)
 
+            # Create full clinical values map (incorporating PLT if extracted)
+            clinical_values = dict(values)
+            for feature in REQUIRED_FEATURES:
+                if feature not in clinical_values:
+                    clinical_values[feature] = defaults[feature]
+
             # Programmatically calculate medical diagnostics in Python
-            score_data = backend.calculate_physiological_score(sanitized_values)
-            severity = backend.calculate_severity(sanitized_values)
-            abnormal_findings = backend.calculate_abnormal_findings(sanitized_values)
+            score_data = backend.calculate_physiological_score(clinical_values)
+            abnormal_findings = backend.calculate_abnormal_findings(clinical_values)
+            normal_findings = backend.calculate_normal_findings(clinical_values)
+            severity = backend.calculate_severity(abnormal_findings)
             health_status = backend.calculate_health_status(score_data["score"])
             risk_level = backend.calculate_risk_level(severity)
 
+            # Programmatically derive primary analysis
+            primary_analysis = backend.calculate_primary_analysis(prediction_name, severity, abnormal_findings)
+
             # Pass programmatic results to prompt to explain and detail
             explanation_json_str = backend.generateExplaination(
-                prediction_name, sanitized_values, severity, score_data["score"], abnormal_findings
+                prediction_name, clinical_values, severity, score_data["score"], abnormal_findings, normal_findings
             )
 
             clean_json = explanation_json_str.strip()
@@ -103,13 +113,16 @@ async def api_analyze(file: UploadFile = File(...)):
             # Combine calculated metrics (Python) and lifestyle recommendations (LLM)
             final_response = {
                 "overview": {
-                    "condition": prediction_name,
+                    "condition": primary_analysis["title"],
                     "severity": severity,
                     "physiological_score": score_data["score"],
                     "health_status": health_status,
                     "risk_level": risk_level
                 },
+                "primary_analysis": primary_analysis,
+                "condition_summary": primary_analysis["summary"],
                 "abnormal_findings": abnormal_findings,
+                "normal_findings": normal_findings,
                 "specialist": llm_data.get("specialist", {}),
                 "diet_plan": llm_data.get("diet_plan", {}),
                 "daily_routine": llm_data.get("daily_routine", []),
