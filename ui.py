@@ -1,76 +1,133 @@
-from nicegui import ui, app
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import os
-import base64
 import json
 import tempfile
 import re
+import uvicorn
 from main import Backend
 
-# Initialize Backend
+# Initialize FastAPI App
+app = FastAPI(title="AI Medical Report Analyzer API")
+
+# Enable CORS for the Next.js frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize ML/AI Backend
 backend = Backend()
 
 # Load model if it exists
 if os.path.exists("anemia_model.pkl"):
     backend.loadModel()
 else:
-    print("Warning: anemia_model.pkl not found. Predictions may fail unless model is trained.")
+    print(
+        "Warning: anemia_model.pkl not found. Predictions may fail unless model is trained."
+    )
 
-@ui.expose
-async def runAnalysis(base64_pdf):
+
+@app.post("/api/analyze")
+async def api_analyze(file: UploadFile = File(...)):
     try:
+        if not file.filename.endswith(".pdf"):
+            return JSONResponse(
+                status_code=400, content={"error": "Only PDF files are supported."}
+            )
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-            temp_pdf.write(base64.b64decode(base64_pdf))
+            temp_pdf.write(await file.read())
             temp_path = temp_pdf.name
 
         try:
             values = backend.extractPdfValues(temp_path)
-            prediction = backend.predict(values)
+
+            # Check if extraction returned any metrics at all
+            if not values:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": "Could not extract any medical parameters from the PDF. Please upload a clear blood report containing standard CBC metrics (WBC, RBC, Hemoglobin, etc.)."
+                    }
+                )
+
+            # Ensure all 7 features required by the Random Forest model are present in the exact order.
+            # Fill missing keys with standard normal baselines to prevent model crashes.
+            REQUIRED_FEATURES = ["WBC", "RBC", "HGB", "HCT", "MCV", "MCH", "MCHC"]
+            defaults = {
+                "WBC": 7.0,      # normal range: 4.5 - 11.0
+                "RBC": 5.0,      # normal range: 4.2 - 6.1
+                "HGB": 15.0,     # normal range: 12.0 - 18.0
+                "HCT": 45.0,     # normal range: 37.0 - 52.0
+                "MCV": 90.0,     # normal range: 80.0 - 100.0
+                "MCH": 30.0,     # normal range: 27.0 - 33.0
+                "MCHC": 34.0     # normal range: 32.0 - 36.0
+            }
+
+            sanitized_values = {}
+            for feature in REQUIRED_FEATURES:
+                sanitized_values[feature] = values.get(feature, defaults[feature])
+
+            prediction = backend.predict(sanitized_values)
             prediction_name = backend.getPredictionName(prediction)
-            explanation_json_str = backend.generateExplaination(prediction_name, values)
-            
+
+            # Programmatically calculate medical diagnostics in Python
+            score_data = backend.calculate_physiological_score(sanitized_values)
+            severity = backend.calculate_severity(sanitized_values)
+            abnormal_findings = backend.calculate_abnormal_findings(sanitized_values)
+            health_status = backend.calculate_health_status(score_data["score"])
+            risk_level = backend.calculate_risk_level(severity)
+
+            # Pass programmatic results to prompt to explain and detail
+            explanation_json_str = backend.generateExplaination(
+                prediction_name, sanitized_values, severity, score_data["score"], abnormal_findings
+            )
+
             clean_json = explanation_json_str.strip()
             if clean_json.startswith("```json"):
                 clean_json = clean_json[7:]
             if clean_json.endswith("```"):
                 clean_json = clean_json[:-3]
-            
-            # Sometimes LLMs return extra text before/after JSON
-            json_match = re.search(r'\{.*\}', clean_json, re.DOTALL)
+
+            json_match = re.search(r"\{.*\}", clean_json, re.DOTALL)
             if json_match:
                 clean_json = json_match.group(0)
-            
-            data = json.loads(clean_json)
-            return {"data": data}
+
+            llm_data = json.loads(clean_json)
+
+            # Combine calculated metrics (Python) and lifestyle recommendations (LLM)
+            final_response = {
+                "overview": {
+                    "condition": prediction_name,
+                    "severity": severity,
+                    "physiological_score": score_data["score"],
+                    "health_status": health_status,
+                    "risk_level": risk_level
+                },
+                "abnormal_findings": abnormal_findings,
+                "specialist": llm_data.get("specialist", {}),
+                "diet_plan": llm_data.get("diet_plan", {}),
+                "daily_routine": llm_data.get("daily_routine", []),
+                "exercise_plan": llm_data.get("exercise_plan", {}),
+                "hydration": llm_data.get("hydration", {}),
+                "prevention_tips": llm_data.get("prevention_tips", []),
+                "follow_up_tests": llm_data.get("follow_up_tests", []),
+                "final_summary": llm_data.get("final_summary", [])
+            }
+            return final_response
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-                
+
     except Exception as e:
-        print(f"Error during analysis: {e}")
-        return {"error": str(e)}
+        print(f"API Error during analysis: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
-app.add_static_files('/frontend', 'frontend')
 
-@ui.page('/')
-def index_page():
-    ui.add_head_html('<link rel="stylesheet" href="/frontend/styles.css">')
-    
-    with open('frontend/index.html', 'r') as f:
-        html_content = f.read()
-    
-    body_match = re.search(r'<body[^>]*>(.*?)</body>', html_content, re.DOTALL | re.IGNORECASE)
-    if body_match:
-        content = body_match.group(1)
-        # Remove the script tag for app.js if it's already in the html, 
-        # because we want to ensure it runs after NiceGUI is ready.
-        content = re.sub(r'<script src="app.js"></script>', '', content, flags=re.IGNORECASE)
-        ui.html(content)
-    
-    ui.add_body_html('<script src="/frontend/app.js"></script>')
-
-ui.run(
-    title="AI Medical Report Analyzer",
-    dark=True,
-    port=8080,
-    reload=False
-)
+if __name__ == "__main__":
+    uvicorn.run("ui:app", host="0.0.0.0", port=8080, reload=True)
