@@ -13,6 +13,7 @@ export default function Home() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [isBackendConnected, setIsBackendConnected] = useState<boolean | null>(null);
 
   const loadingSteps = [
     "Extracting blood panel markers from PDF report...",
@@ -20,6 +21,34 @@ export default function Home() {
     "Generating AI-guided lifestyle and diet plans...",
     "Preparing your premium wellness dashboard...",
   ];
+
+  // Periodic health check on backend connection
+  useEffect(() => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+    
+    const checkConnection = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/health?t=${Date.now()}`, {
+          cache: "no-store",
+          headers: {
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache",
+          },
+        });
+        if (res.ok) {
+          setIsBackendConnected(true);
+        } else {
+          setIsBackendConnected(false);
+        }
+      } catch (e) {
+        setIsBackendConnected(false);
+      }
+    };
+
+    checkConnection();
+    const interval = setInterval(checkConnection, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let progressTimer: NodeJS.Timeout;
@@ -117,10 +146,22 @@ export default function Home() {
             Ai-medical-report-<span className="text-sky-400 font-semibold">analyzer</span>
           </span>
         </div>
-        <div className="flex items-center space-x-2 text-[10px] bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800/80 text-slate-400 font-semibold tracking-wide uppercase">
-          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse mr-1" />
-          API Connected
-        </div>
+        {isBackendConnected === true ? (
+          <div className="flex items-center space-x-2 text-[10px] bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800/80 text-emerald-400 font-semibold tracking-wide uppercase">
+            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse mr-1" />
+            API Connected
+          </div>
+        ) : isBackendConnected === false ? (
+          <div className="flex items-center space-x-2 text-[10px] bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800/80 text-rose-500 font-bold tracking-wide uppercase">
+            <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse mr-1" />
+            Backend Offline
+          </div>
+        ) : (
+          <div className="flex items-center space-x-2 text-[10px] bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800/80 text-slate-400 font-semibold tracking-wide uppercase">
+            <span className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-pulse mr-1" />
+            Checking Connection
+          </div>
+        )}
       </header>
 
       {/* Main Core Section */}
@@ -156,8 +197,20 @@ export default function Home() {
                 </p>
               </div>
 
+              {/* Offline Warning Banner */}
+              {isBackendConnected === false && (
+                <div className="max-w-2xl mx-auto p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-300 flex items-center justify-center space-x-2 shadow-lg shadow-rose-950/10">
+                  <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse flex-shrink-0" />
+                  <span>The backend API server is offline. Please run the server (<code>python ui.py</code>) to enable report upload and analysis.</span>
+                </div>
+              )}
+
               {/* File Upload Zone */}
-              <UploadCard onUpload={handleUpload} isLoading={isLoading} />
+              <UploadCard 
+                onUpload={handleUpload} 
+                isLoading={isLoading} 
+                isBackendConnected={isBackendConnected} 
+              />
 
               {/* API error notifier */}
               {apiError && (

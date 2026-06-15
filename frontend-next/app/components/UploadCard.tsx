@@ -7,9 +7,14 @@ import { Upload, FileText, AlertCircle, Sparkles } from "lucide-react";
 interface UploadCardProps {
   onUpload: (file: File) => void;
   isLoading: boolean;
+  isBackendConnected?: boolean | null;
 }
 
-export default function UploadCard({ onUpload, isLoading }: UploadCardProps) {
+export default function UploadCard({
+  onUpload,
+  isLoading,
+  isBackendConnected = null,
+}: UploadCardProps) {
   const [isDragActive, setIsDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -17,6 +22,10 @@ export default function UploadCard({ onUpload, isLoading }: UploadCardProps) {
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isBackendConnected === false) {
+      setIsDragActive(false);
+      return;
+    }
     if (e.type === "dragenter" || e.type === "dragover") {
       setIsDragActive(true);
     } else if (e.type === "dragleave") {
@@ -27,6 +36,11 @@ export default function UploadCard({ onUpload, isLoading }: UploadCardProps) {
   const validateAndProcessFile = (file: File | null) => {
     if (!file) return;
     
+    if (isBackendConnected === false) {
+      setError("Cannot upload report: The backend API server is offline. Please run the server using 'python ui.py'.");
+      return;
+    }
+
     if (file.type !== "application/pdf") {
       setError("Please upload a valid PDF medical report.");
       return;
@@ -46,6 +60,11 @@ export default function UploadCard({ onUpload, isLoading }: UploadCardProps) {
     e.stopPropagation();
     setIsDragActive(false);
 
+    if (isBackendConnected === false) {
+      setError("Cannot upload report: The backend API server is offline. Please run the server using 'python ui.py'.");
+      return;
+    }
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       validateAndProcessFile(e.dataTransfer.files[0]);
     }
@@ -53,12 +72,20 @@ export default function UploadCard({ onUpload, isLoading }: UploadCardProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
+    if (isBackendConnected === false) {
+      setError("Cannot upload report: The backend API server is offline. Please run the server using 'python ui.py'.");
+      return;
+    }
     if (e.target.files && e.target.files[0]) {
       validateAndProcessFile(e.target.files[0]);
     }
   };
 
   const onButtonClick = () => {
+    if (isBackendConnected === false) {
+      setError("Cannot upload report: The backend API server is offline. Please run the server using 'python ui.py'.");
+      return;
+    }
     inputRef.current?.click();
   };
 
@@ -70,7 +97,7 @@ export default function UploadCard({ onUpload, isLoading }: UploadCardProps) {
         className="hidden"
         accept=".pdf"
         onChange={handleChange}
-        disabled={isLoading}
+        disabled={isLoading || isBackendConnected === false}
       />
 
       <motion.div
@@ -79,13 +106,15 @@ export default function UploadCard({ onUpload, isLoading }: UploadCardProps) {
         onDragLeave={handleDrag}
         onDrop={handleDrop}
         onClick={onButtonClick}
-        className={`glass-panel cursor-pointer rounded-3xl p-10 flex flex-col items-center justify-center border-dashed border-2 relative overflow-hidden transition-all duration-300 ${
-          isDragActive
-            ? "border-sky-400 bg-sky-500/10 shadow-[0_0_30px_rgba(14,165,233,0.2)]"
-            : "border-slate-700/60 bg-slate-900/30 hover:border-sky-500/40 hover:bg-slate-900/50 hover:shadow-[0_0_20px_rgba(14,165,233,0.1)]"
+        className={`glass-panel rounded-3xl p-10 flex flex-col items-center justify-center border-dashed border-2 relative overflow-hidden transition-all duration-300 ${
+          isBackendConnected === false
+            ? "border-rose-950/40 bg-rose-950/5 cursor-not-allowed opacity-60"
+            : isDragActive
+            ? "border-sky-400 bg-sky-500/10 shadow-[0_0_30px_rgba(14,165,233,0.2)] cursor-pointer"
+            : "border-slate-700/60 bg-slate-900/30 hover:border-sky-500/40 hover:bg-slate-900/50 hover:shadow-[0_0_20px_rgba(14,165,233,0.1)] cursor-pointer"
         }`}
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
+        whileHover={isBackendConnected === false ? {} : { scale: 1.01 }}
+        whileTap={isBackendConnected === false ? {} : { scale: 0.99 }}
       >
         {/* Ambient background decoration */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />

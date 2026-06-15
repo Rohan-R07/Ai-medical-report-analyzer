@@ -32,6 +32,11 @@ else:
     )
 
 
+@app.get("/api/health")
+async def api_health():
+    return {"status": "healthy"}
+
+
 @app.post("/api/analyze")
 async def api_analyze(file: UploadFile = File(...)):
     try:

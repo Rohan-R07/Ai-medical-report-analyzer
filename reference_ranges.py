@@ -9,7 +9,7 @@ REFERENCE_RANGES = {
         "unit": "x10^3/uL",
         "name": "WBC",
         "full_name": "White Blood Cell Count",
-        "deduction": 5
+        "deduction": 5,
     },
     "RBC": {
         "min": 4.0,
@@ -19,17 +19,17 @@ REFERENCE_RANGES = {
         "unit": "x10^6/uL",
         "name": "RBC",
         "full_name": "Red Blood Cell Count",
-        "deduction": 5
+        "deduction": 5,
     },
     "HGB": {
-        "min": 13.5,  # Adjusted to 13.5 so that 12.5 is "Low"
+        "min": 13.5,
         "max": 17.5,
         "critical_low": 8.0,
         "critical_high": 20.0,
         "unit": "g/dL",
         "name": "Hemoglobin",
         "full_name": "Hemoglobin",
-        "deduction": 8
+        "deduction": 8,
     },
     "HCT": {
         "min": 36.0,
@@ -39,7 +39,7 @@ REFERENCE_RANGES = {
         "unit": "%",
         "name": "PCV",
         "full_name": "Packed Cell Volume (PCV)",
-        "deduction": 5
+        "deduction": 5,
     },
     "MCV": {
         "min": 80.0,
@@ -49,7 +49,7 @@ REFERENCE_RANGES = {
         "unit": "fL",
         "name": "MCV",
         "full_name": "Mean Corpuscular Volume",
-        "deduction": 5
+        "deduction": 5,
     },
     "MCH": {
         "min": 27.0,
@@ -59,7 +59,7 @@ REFERENCE_RANGES = {
         "unit": "pg",
         "name": "MCH",
         "full_name": "Mean Corpuscular Hemoglobin",
-        "deduction": 4
+        "deduction": 4,
     },
     "MCHC": {
         "min": 32.0,
@@ -69,7 +69,7 @@ REFERENCE_RANGES = {
         "unit": "g/dL",
         "name": "MCHC",
         "full_name": "Mean Corpuscular Hemoglobin Concentration",
-        "deduction": 4
+        "deduction": 4,
     },
     "PLT": {
         "min": 155.0,  # 150 falls under Borderline
@@ -83,9 +83,10 @@ REFERENCE_RANGES = {
         "full_name": "Platelet Count",
         "deduction_borderline": 3,
         "deduction_abnormal": 8,
-        "deduction_critical": 15
-    }
+        "deduction_critical": 15,
+    },
 }
+
 
 def get_health_status(score):
     """
