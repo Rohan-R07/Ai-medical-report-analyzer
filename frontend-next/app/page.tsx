@@ -24,7 +24,7 @@ export default function Home() {
 
   // Periodic health check on backend connection
   useEffect(() => {
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ai-medical-report-analyzer-1-lsn2.onrender.com";
     
     const checkConnection = async () => {
       try {
