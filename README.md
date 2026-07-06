@@ -1,5 +1,5 @@
 
-# AI Medical Report Analyzer
+# MediScan AI (AI Medical Report Analyzer)
 
 An intelligent, full-stack medical diagnostics application designed to parse, classify, analyze, and provide AI-guided clinical recommendations directly from Complete Blood Count (CBC) laboratory report PDFs. 
 
