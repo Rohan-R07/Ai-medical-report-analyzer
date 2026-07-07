@@ -10,7 +10,7 @@ import uvicorn
 
 # Load environment variables
 current_dir = os.path.dirname(os.path.abspath(__file__))
-dotenv_path = os.path.join(current_dir, ".env")
+dotenv_path = os.path.join(os.path.dirname(current_dir), ".env")
 load_dotenv(dotenv_path, override=True)
 
 hf_token = os.getenv("HF_TOKEN")
@@ -19,6 +19,9 @@ if hf_token:
 else:
     print("WARNING: HF_TOKEN not found in environment!")
 
+import sys
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
 from main import Backend
 
 # Initialize FastAPI App
@@ -37,8 +40,9 @@ app.add_middleware(
 backend = Backend()
 
 # Load model if it exists
-if os.path.exists("anemia_model.pkl"):
-    backend.loadModel()
+model_path = os.path.join(current_dir, "anemia_model.pkl")
+if os.path.exists(model_path):
+    backend.loadModel(model_path)
 else:
     print(
         "Warning: anemia_model.pkl not found. Predictions may fail unless model is trained."
@@ -171,4 +175,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     # Disable reload in production (when PORT is set) to prevent file system polling overhead
     reload = os.environ.get("PORT") is None
-    uvicorn.run("ui:app", host="0.0.0.0", port=port, reload=reload)
+    uvicorn.run("index:app", host="0.0.0.0", port=port, reload=reload)

@@ -10,7 +10,7 @@ import regex as re
 from openai import OpenAI
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-dotenv_path = os.path.join(current_dir, ".env")
+dotenv_path = os.path.join(os.path.dirname(current_dir), ".env")
 load_dotenv(dotenv_path, override=True)
 
 
@@ -54,8 +54,10 @@ class Backend:
         joblib.dump(self.model, "anemia_model.pkl")
 
     # Loading trained model
-    def loadModel(self):
-        self.model = joblib.load("anemia_model.pkl")
+    def loadModel(self, model_path=None):
+        if model_path is None:
+            model_path = os.path.join(current_dir, "anemia_model.pkl")
+        self.model = joblib.load(model_path)
 
     # Making Prediction patient_dict means the the value input values extracted from pdf and passed here
     def predict(self, patient_dict):

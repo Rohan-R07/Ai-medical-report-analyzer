@@ -1,6 +1,6 @@
 import { MedicalReportData } from "../types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ai-medical-report-analyzer-1-lsn2.onrender.com";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
 /**
  * Uploads a PDF report file to the FastAPI backend for analysis
