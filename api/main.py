@@ -7,7 +7,7 @@ import joblib
 from pypdf import PdfReader
 import os
 import regex as re
-from openai import OpenAI
+from ai_provider import AIProvider
 import io
 import logging
 import json
@@ -206,6 +206,7 @@ class Backend:
         self.csvData = None
         self.model = None
         self.accuracy = None
+        self.ai_provider = AIProvider()
 
     # Loading Dataset and storing it in csvData variable
     def setDataset(self, file):
@@ -626,95 +627,14 @@ class Backend:
         abnormal_findings,
         normal_findings,
     ):
-        hf_token = os.getenv("HF_TOKEN")
-        prompt = f"""
-            You are a medical report analysis API.
-
-            Input:
-            Condition: {prediction_name}
-            Severity: {severity}
-            Physiological Score: {score}
-            Abnormal Findings: {abnormal_findings}
-            Normal Findings: {normal_findings}
-            Blood Values: {values}
-
-            You MUST explain these pre-calculated physiological values. 
-            Do NOT calculate any scores, severity levels, or status ratings yourself. Only explain them.
-
-            Return ONLY valid JSON matching this exact structure:
-            {{
-              "specialist": {{
-                "name": "",
-                "reason": ""
-              }},
-              "diet_plan": {{
-                "breakfast": [],
-                "lunch": [],
-                "dinner": [],
-                "snacks": []
-              }},
-              "daily_routine": [
-                {{
-                  "time": "Morning",
-                  "activity": ""
-                }},
-                {{
-                  "time": "Afternoon",
-                  "activity": ""
-                }},
-                {{
-                  "time": "Evening",
-                  "activity": ""
-                }},
-                {{
-                  "time": "Night",
-                  "activity": ""
-                }}
-              ],
-              "exercise_plan": {{
-                "duration": "",
-                "activities": []
-              }},
-              "hydration": {{
-                "target": "",
-                "tip": ""
-              }},
-              "prevention_tips": [],
-              "follow_up_tests": [],
-              "final_summary": []
-            }}
-
-            Return ONLY valid JSON.
-            Do not return markdown.
-            Do not return explanations outside JSON.
-            Do not wrap JSON in code blocks.
-
-            Rules:
-
-            * Use concise responses.
-            * Use simple language.
-            * No diagnosis claims.
-            * No medication suggestions.
-            * No legal or medical disclaimers.
-            * Focus only on explaining provided values.
-            * Diet must use common foods.
-            * Daily routine must be realistic.
-            * Maximum 3 items per list unless necessary.
-            
-            * Keep total response compact.
-        """
-
-        client = OpenAI(
-            base_url="https://router.huggingface.co/v1",
-            api_key=hf_token,
+        return self.ai_provider.generate_explanation(
+            prediction_name=prediction_name,
+            values=values,
+            severity=severity,
+            score=score,
+            abnormal_findings=abnormal_findings,
+            normal_findings=normal_findings
         )
-
-        completion = client.chat.completions.create(
-            model="meta-llama/Llama-3.1-8B-Instruct",
-            messages=[{"role": "user", "content": prompt}],
-        )
-
-        return completion.choices[0].message.content
 
 
 # if __name__ == "__main__":

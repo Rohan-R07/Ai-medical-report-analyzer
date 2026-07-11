@@ -13,11 +13,11 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(os.path.dirname(current_dir), ".env")
 load_dotenv(dotenv_path, override=True)
 
-hf_token = os.getenv("HF_TOKEN")
-if hf_token:
-    print(f"INFO: Loaded HF_TOKEN successfully (starts with {hf_token[:10]}...)")
+gemini_key = os.getenv("GEMINI_API_KEY")
+if gemini_key:
+    print(f"INFO: Loaded GEMINI_API_KEY successfully (starts with {gemini_key[:10]}...)")
 else:
-    print("WARNING: HF_TOKEN not found in environment!")
+    print("WARNING: GEMINI_API_KEY not found in environment!")
 
 import sys
 if current_dir not in sys.path:
