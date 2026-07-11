@@ -145,19 +145,21 @@ Ai-medical-analyser/
 
 ---
 
-## How to Obtain a Hugging Face API Token
+## How to Obtain a Google Gemini API Key
 
-The backend uses a Hugging Face hosted Llama model to create structured, explainable health recommendations. Follow these steps to obtain your free access token:
+The backend uses Google's Gemini API to create structured, explainable health recommendations. Follow these steps to obtain your free API key:
 
-1. Visit [Hugging Face](https://huggingface.co/) and log in or register a free account.
-2. Go to your **Profile Settings** by clicking on your avatar in the top-right corner, then selecting **Settings**.
-3. In the left-hand sidebar, click on **Access Tokens**.
-4. Click **New token**.
-5. Configure the token options:
-   * **Name**: `ai-medical-analyzer`
-   * **Role**: `Read`
-6. Click **Generate a token**.
-7. Copy the generated token string (starts with `hf_...`) and paste it as the value for `HF_TOKEN` in your `.env` file.
+1. Visit [Google AI Studio](https://aistudio.google.com/) and sign in with your Google account.
+2. Click **Get API key** on the top-left sidebar.
+3. Click **Create API key** and select or create a project.
+4. Copy the generated key and paste it as the value for `GEMINI_API_KEY` in your `.env` file.
+
+---
+
+## 🛠️ Developed With
+
+* **Google Gemini API** (`gemini-1.5-flash`) - AI-driven health and lifestyle analysis.
+* **Antigravity (Google DeepMind)** - Engineered, optimized, and built using Google DeepMind's advanced agentic AI coding assistant.
 
 ---
 
