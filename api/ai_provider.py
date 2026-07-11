@@ -63,7 +63,10 @@ class AIProvider:
         logger.info("Initializing Google Gemini API Client...")
         # Create client instance once
         self.client = genai.Client(api_key=self.api_key)
-        self.model_name = "gemini-flash-latest"
+        self.model_name = os.getenv("GEMINI_MODEL")
+        if not self.model_name:
+            logger.error("GEMINI_MODEL environment variable is missing or empty!")
+            raise ValueError("Invalid model configuration. GEMINI_MODEL must be provided.")
 
     def generate_explanation(
         self,

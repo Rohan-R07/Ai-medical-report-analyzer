@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ai-medical-report-analyzer-backend
+    env: python
+    pythonVersion: "3.12"
+    rootDir: api
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn index:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
