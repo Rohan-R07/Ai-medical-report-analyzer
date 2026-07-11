@@ -63,7 +63,7 @@ class AIProvider:
         logger.info("Initializing Google Gemini API Client...")
         # Create client instance once
         self.client = genai.Client(api_key=self.api_key)
-        self.model_name = "gemini-2.5-flash-lite"
+        self.model_name = "gemini-2.0-flash"
 
     def generate_explanation(
         self,
