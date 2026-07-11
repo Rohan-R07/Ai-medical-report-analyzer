@@ -28,9 +28,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${outfit.variable} h-full antialiased dark`}
+      className={`${inter.variable} ${outfit.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#040814] text-slate-100 font-sans selection:bg-sky-500/30 selection:text-sky-200">
+      <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)] font-sans selection:bg-teal-500/20 selection:text-teal-800">
         {/* Glow Effects */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           <div className="glow-blob w-[500px] h-[500px] bg-sky-500/10 top-[-10%] left-[-10%]" />

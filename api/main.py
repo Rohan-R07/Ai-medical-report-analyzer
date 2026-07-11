@@ -8,6 +8,193 @@ from pypdf import PdfReader
 import os
 import regex as re
 from openai import OpenAI
+import io
+import logging
+import json
+
+# Setup logger
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("medical_report_analyzer")
+
+# Alias mapping for CBC parameters (sorted from longest to shortest within lists)
+ALIAS_MAP = {
+    "WBC": [
+        "white blood cell count", "white blood cells", "total wbc count",
+        "total wbc", "wbc count", "wbc"
+    ],
+    "RBC": [
+        "red blood cell count", "red blood cells", "total rbc count",
+        "total rbc", "rbc count", "rbc"
+    ],
+    "HGB": [
+        "haemoglobin", "hemoglobin", "hgb", "hb"
+    ],
+    "HCT": [
+        "packed cell volume", "hematocrit", "haematocrit", "pcv", "hct"
+    ],
+    "MCV": [
+        "mean corpuscular volume", "mcv"
+    ],
+    "MCH": [
+        "mean corpuscular hemoglobin", "mean corpuscular haemoglobin", "mch"
+    ],
+    "MCHC": [
+        "mean corpuscular hemoglobin concentration", 
+        "mean corpuscular haemoglobin concentration", "mchc"
+    ],
+    "PLT": [
+        "platelet count", "platelets", "plt"
+    ]
+}
+
+def normalize_text(text):
+    if not text:
+        return ""
+    # Replace tabs, newlines, carriage returns with spaces
+    normalized = text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+    # Collapse multiple spaces to a single space
+    normalized = re.sub(r'\s+', ' ', normalized)
+    return normalized.strip()
+
+def normalize_aliases(text):
+    for key, aliases in ALIAS_MAP.items():
+        # Sort aliases by length descending
+        sorted_aliases = sorted(aliases, key=len, reverse=True)
+        for alias in sorted_aliases:
+            # Lookbehind/lookahead for word boundary to prevent substring collision
+            pattern = rf"(?<![a-zA-Z0-9]){re.escape(alias)}(?![a-zA-Z0-9])"
+            text = re.sub(pattern, key, text, flags=re.IGNORECASE)
+    return text
+
+def normalize_unit(key, val, unit):
+    if val is None:
+        return None
+    unit_str = str(unit).lower() if unit else ""
+    
+    if key == "WBC":
+        if val > 100.0:
+            val = val / 1000.0
+        return round(val, 2)
+        
+    elif key == "RBC":
+        if val > 1000.0:
+            val = val / 1000000.0
+        return round(val, 2)
+        
+    elif key == "HGB":
+        if val > 50.0:
+            val = val / 10.0
+        return round(val, 2)
+        
+    elif key == "HCT":
+        if val < 1.0:
+            val = val * 100.0
+        return round(val, 2)
+        
+    elif key == "MCV":
+        return round(val, 2)
+        
+    elif key == "MCH":
+        return round(val, 2)
+        
+    elif key == "MCHC":
+        if val < 1.0:
+            val = val * 100.0
+        elif val > 100.0:
+            val = val / 10.0
+        return round(val, 2)
+        
+    elif key == "PLT":
+        if "lakh" in unit_str or "10^5" in unit_str or "10*5" in unit_str:
+            val = val * 100.0
+        elif "million" in unit_str or "10^6" in unit_str or "10*6" in unit_str:
+            val = val * 1000.0
+        elif any(k in unit_str for k in ["10^3", "10*3", "10e3", "k", "thousand"]):
+            pass
+        elif val < 20.0:
+            val = val * 100.0
+        elif val > 1000.0:
+            val = val / 1000.0
+        return round(val, 2)
+        
+    return round(val, 2)
+
+def extract_text_via_ocr(pdf_file):
+    try:
+        import easyocr
+        import fitz  # PyMuPDF
+        
+        logger.info("Initializing EasyOCR reader for English...")
+        reader = easyocr.Reader(['en'], verbose=False)
+        
+        doc = fitz.open(pdf_file)
+        ocr_text = ""
+        
+        for page_num in range(len(doc)):
+            logger.info(f"Running OCR on page {page_num + 1}/{len(doc)}...")
+            page = doc[page_num]
+            pix = page.get_pixmap(dpi=150)
+            img_bytes = pix.tobytes("png")
+            
+            results = reader.readtext(img_bytes)
+            page_text = " ".join([res[1] for res in results])
+            ocr_text += page_text + "\n"
+            
+        return ocr_text
+    except Exception as e:
+        logger.error(f"Error during OCR extraction: {e}")
+        return ""
+
+def extract_parameters_from_text(text):
+    patient_data = {}
+    
+    # Separator/noise pattern: spaces, colons, hyphens, equals, words like value/result, parenthesized blocks, spaces
+    separator_noise = r"(?:\s*[\(\[\{][^\]\)\}]*[\)\]\}]|\s*[:\-=\/]\s*|\s*(?:result|value|count|level|levels|flag|high|low|normal)\s*|\s+)*"
+    
+    # Matches common CBC units case-insensitively, supporting scientific notation exponent [eE] (e.g. 10E3, 10E6)
+    unit_regex = r"(?:x\s*10[\^eE]?\s*3\s*/\s*uL|10[\^eE]?\s*3\s*/\s*uL|x\s*10[\^eE]?\s*3|10[\^eE]?\s*3|k/cumm|k/uL|k\b|thousand[s]?/uL|thousand[s]?/cumm|thousand[s]?|/uL|/cumm|/cmm|uL|cumm|cmm|x\s*10[\^eE]?\s*6\s*/\s*uL|10[\^eE]?\s*6\s*/\s*uL|x\s*10[\^eE]?\s*6|10[\^eE]?\s*6|million/uL|m/uL|million|g/dL|g/L|gm/dL|gm%|%|vol%|fL|pg|lakh[s]?/cumm|lakh[s]?)"
+    
+    # Flag noise that can appear between the value and the unit
+    flag_noise = r"(?:\s*(?:alert|critical|low|high|normal|abnormal|verified|by)*\s*)*"
+    
+    for key in ["WBC", "RBC", "HGB", "HCT", "MCV", "MCH", "MCHC", "PLT"]:
+        try:
+            pattern = rf"(?<![a-zA-Z0-9]){key}(?![a-zA-Z0-9])"
+            matches = list(re.finditer(pattern, text, re.IGNORECASE))
+            
+            for match in matches:
+                start_pos = match.end()
+                sub = text[start_pos:start_pos+100]
+                
+                # Match number, optional unit. Handles optional zero-padded footnote codes (like 01-09) before the actual result
+                value_pattern = rf"^{separator_noise}(?:(0[1-9])\s+{separator_noise})?(\d+(?:\.\d+)?|\d{{1,3}}(?:,\d{{3}})+)(?:{flag_noise}({unit_regex}))?"
+                val_match = re.match(value_pattern, sub, re.IGNORECASE)
+                if val_match:
+                    val_str = val_match.group(2).replace(',', '')
+                    val = float(val_str)
+                    unit = val_match.group(3)
+                    
+                    normalized_val = normalize_unit(key, val, unit)
+                    patient_data[key] = normalized_val
+                    break
+        except Exception as e:
+            logger.error(f"Failed to extract parameter {key}: {e}")
+            
+    return patient_data
+
+def log_extraction_summary(text_success, detected, missing, normalized, confidence, ocr_used, prediction_input):
+    log_data = {
+        "text_extraction_success": text_success,
+        "ocr_used": ocr_used,
+        "detected_parameters": list(detected),
+        "missing_parameters": list(missing),
+        "normalized_values": normalized,
+        "confidence_score": f"{confidence * 100:.1f}%",
+        "prediction_input": prediction_input
+    }
+    logger.info(f"\n================ CBC EXTRACTION LOG ================\n"
+                f"{json.dumps(log_data, indent=2)}\n"
+                f"====================================================")
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(os.path.dirname(current_dir), ".env")
@@ -86,105 +273,105 @@ class Backend:
     # Independent function just using to extract input values from the given PDF file
     # The Input_ values is always a fixed sequence of numbers (WBC, RBC, HGB, HCT, MCV, MCH, MCHC)
     def extractPdfValues(self, pdf_file):
-
-        # selelctin pdf file
-        pdf = PdfReader(pdf_file)
-
-        # creating a storing variable
         all_text = ""
+        ocr_used = False
+        text_success = False
 
-        # iterating to all pages and then extracting text then finally storing it in a single variable
-        for page in pdf.pages:
-            all_text += page.extract_text()
+        try:
+            pdf = PdfReader(pdf_file)
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    all_text += page_text + " "
+            all_text = all_text.strip()
+        except Exception as e:
+            logger.error(f"PyPDF extraction error: {e}")
 
-        # a external dictonary  to store values
+        # Check if PyPDF returned little or no text
+        is_empty_or_tiny = len(all_text.strip()) < 100
+
         patient_data = {}
+        confidence = 0.0
+        
+        if not is_empty_or_tiny:
+            normalized_text = normalize_text(all_text)
+            alias_normalized_text = normalize_aliases(normalized_text)
+            patient_data = extract_parameters_from_text(alias_normalized_text)
+            
+            # Calculate confidence
+            extracted_count = len(patient_data)
+            if extracted_count == 8:
+                confidence = 1.0
+            elif extracted_count == 7:
+                confidence = 0.90
+            elif extracted_count == 6:
+                confidence = 0.75
+            else:
+                confidence = (extracted_count / 8.0) * 0.8
+                
+            text_success = True
 
-        # The searching for these values in the pdf
-        features = {
-            "WBC": [
-                r"Total WBC count\s+\d+\s+(\d+\.?\d*)",
-                r"Total WBC count\s+(\d+\.?\d*)",
-                r"WBC\s+\d+\s+(\d+\.?\d*)",
-                r"WBC\s+(\d+\.?\d*)",
-            ],
-            "RBC": [
-                r"Total RBC count\s+\d+\s+(\d+\.?\d*)",
-                r"Total RBC count\s+(\d+\.?\d*)",
-                r"RBC\s+\d+\s+(\d+\.?\d*)",
-                r"RBC\s+(\d+\.?\d*)",
-            ],
-            "HGB": [
-                r"Hemoglobin\s*\(Hb\)\s+\d+\s+(\d+\.?\d*)",
-                r"Hemoglobin\s*\(Hb\)\s+(\d+\.?\d*)",
-                r"Hemoglobin\s+\d+\s+(\d+\.?\d*)",
-                r"Hemoglobin\s+(\d+\.?\d*)",
-                r"HGB\s+\d+\s+(\d+\.?\d*)",
-                r"HGB\s+(\d+\.?\d*)",
-            ],
-            "HCT": [
-                r"Hematocrit\s*\(HCT\)\s+\d+\s+(\d+\.?\d*)",
-                r"Hematocrit\s*\(HCT\)\s+(\d+\.?\d*)",
-                r"Hematocrit\s+\d+\s+(\d+\.?\d*)",
-                r"Hematocrit\s+(\d+\.?\d*)",
-                r"Packed Cell Volume\s*\(PCV\)\s+\d+\s+(\d+\.?\d*)",
-                r"Packed Cell Volume\s*\(PCV\)\s+(\d+\.?\d*)",
-                r"PCV\s+\d+\s+(\d+\.?\d*)",
-                r"PCV\s+(\d+\.?\d*)",
-                r"HCT\s+\d+\s+(\d+\.?\d*)",
-                r"HCT\s+(\d+\.?\d*)",
-            ],
-            "MCV": [
-                r"Mean Corpuscular Volume\s*\(MCV\)\s+\d+\s+(\d+\.?\d*)",
-                r"Mean Corpuscular Volume\s*\(MCV\)\s+(\d+\.?\d*)",
-                r"MCV\s+\d+\s+(\d+\.?\d*)",
-                r"MCV\s+(\d+\.?\d*)",
-            ],
-            "MCH": [
-                r"Mean Corpuscular Hemoglobin\s+\d+\s+(\d+\.?\d*)",
-                r"Mean Corpuscular Hemoglobin\s+(\d+\.?\d*)",
-                r"MCH\s+\d+\s+(\d+\.?\d*)",
-                r"MCH\s+(\d+\.?\d*)",
-            ],
-            "MCHC": [
-                r"Mean Corpuscular Hemoglobin Concentration\s+\d+\s+(\d+\.?\d*)",
-                r"Mean Corpuscular Hemoglobin Concentration\s+(\d+\.?\d*)",
-                r"MCHC\s+\d+\s+(\d+\.?\d*)",
-                r"MCHC\s+(\d+\.?\d*)",
-            ],
-            "PLT": [
-                r"Platelet\s*Count\s+\d+\s+(\d+\.?\d*)",
-                r"Platelet\s*Count\s+(\d+\.?\d*)",
-                r"Platelets\s*\(PLT\)\s+\d+\s+(\d+\.?\d*)",
-                r"Platelets\s*\(PLT\)\s+(\d+\.?\d*)",
-                r"Platelets\s+\d+\s+(\d+\.?\d*)",
-                r"Platelets\s+(\d+\.?\d*)",
-                r"PLT\s+\d+\s+(\d+\.?\d*)",
-                r"PLT\s+(\d+\.?\d*)",
-            ],
+        # OCR Fallback if PyPDF text is insufficient or confidence is below 70% (less than 6 parameters)
+        if is_empty_or_tiny or len(patient_data) < 6:
+            logger.info("PyPDF text is insufficient or confidence < 70%. Falling back to OCR...")
+            ocr_text = extract_text_via_ocr(pdf_file)
+            
+            if len(ocr_text.strip()) >= 50:
+                ocr_used = True
+                normalized_ocr_text = normalize_text(ocr_text)
+                alias_normalized_ocr_text = normalize_aliases(normalized_ocr_text)
+                ocr_patient_data = extract_parameters_from_text(alias_normalized_ocr_text)
+                
+                # Calculate OCR confidence
+                ocr_extracted_count = len(ocr_patient_data)
+                ocr_confidence = 0.0
+                if ocr_extracted_count == 8:
+                    ocr_confidence = 1.0
+                elif ocr_extracted_count == 7:
+                    ocr_confidence = 0.90
+                elif ocr_extracted_count == 6:
+                    ocr_confidence = 0.75
+                else:
+                    ocr_confidence = (ocr_extracted_count / 8.0) * 0.8
+                
+                if len(ocr_patient_data) >= len(patient_data):
+                    patient_data = ocr_patient_data
+                    confidence = ocr_confidence
+                    text_success = True
+
+        # Calculate final lists of detected/missing parameters
+        all_features = ["WBC", "RBC", "HGB", "HCT", "MCV", "MCH", "MCHC", "PLT"]
+        detected = set(patient_data.keys())
+        missing = set(all_features) - detected
+
+        # Prediction input format (first 7 parameters)
+        REQUIRED_FEATURES = ["WBC", "RBC", "HGB", "HCT", "MCV", "MCH", "MCHC"]
+        defaults = {
+            "WBC": 7.0,
+            "RBC": 5.0,
+            "HGB": 15.0,
+            "HCT": 45.0,
+            "MCV": 90.0,
+            "MCH": 30.0,
+            "MCHC": 34.0,
         }
+        prediction_input = {feat: patient_data.get(feat, defaults[feat]) for feat in REQUIRED_FEATURES}
 
-        # searching for the given features in the extracted text
-        for model_name, patterns in features.items():
-            for pattern in patterns:
-                match = re.search(pattern, all_text, re.IGNORECASE)
-                if match:
-                    patient_data[model_name] = float(match.group(1))
-                    print(f"{model_name} = {patient_data[model_name]}")
-                    break
+        # Log extraction details
+        log_extraction_summary(
+            text_success=text_success,
+            detected=detected,
+            missing=missing,
+            normalized=patient_data,
+            confidence=confidence,
+            ocr_used=ocr_used,
+            prediction_input=prediction_input
+        )
 
-        # Normalization of units for WBC and Platelets (PLT) because some labs write report differently
-        if "WBC" in patient_data:
-            val = patient_data["WBC"]
-            if val > 100.0:
-                patient_data["WBC"] = round(val / 1000.0, 2)
-                print(f"Normalized WBC: {val} -> {patient_data['WBC']}")
-
-        if "PLT" in patient_data:
-            val = patient_data["PLT"]
-            if val > 1000.0:
-                patient_data["PLT"] = round(val / 1000.0, 2)
-                print(f"Normalized PLT: {val} -> {patient_data['PLT']}")
+        # Reject report if confidence is below 70% (i.e. fewer than 6 parameters)
+        if confidence < 0.70 or len(patient_data) < 6:
+            logger.warning(f"Report rejected. Confidence ({confidence * 100:.1f}%) is below 70% (less than 6 parameters).")
+            return {}
 
         return patient_data
 
@@ -513,6 +700,7 @@ class Backend:
             * Diet must use common foods.
             * Daily routine must be realistic.
             * Maximum 3 items per list unless necessary.
+            
             * Keep total response compact.
         """
 
@@ -522,7 +710,7 @@ class Backend:
         )
 
         completion = client.chat.completions.create(
-            model="meta-llama/Llama-3.1-8B-Instruct:novita",
+            model="meta-llama/Llama-3.1-8B-Instruct",
             messages=[{"role": "user", "content": prompt}],
         )
 

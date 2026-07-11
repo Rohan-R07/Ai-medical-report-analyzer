@@ -66,7 +66,7 @@ export default function DailyRoutineCard({ routine }: DailyRoutineCardProps) {
                 className="relative group"
               >
                 {/* Timeline node circle */}
-                <div className={`absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border-2 bg-[#040814] ${styles.split(" ")[1]} group-hover:scale-125 transition-transform duration-200`} />
+                <div className={`absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border-2 bg-[var(--background)] ${styles.split(" ")[1]} group-hover:scale-125 transition-transform duration-200`} />
 
                 <div className="space-y-1">
                   <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${styles}`}>

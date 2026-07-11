@@ -9,3 +9,5 @@ python-dotenv==1.0.1
 openpyxl==3.1.2
 python-multipart==0.0.9
 regex
+pymupdf
+easyocr

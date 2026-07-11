@@ -42,7 +42,7 @@ export default function Dashboard() {
 
   if (!isReady || !reportData) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#040814]">
+      <div className="flex-1 flex items-center justify-center bg-[var(--background)]">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-400 text-xs font-semibold">Loading physiological metrics...</p>
@@ -70,7 +70,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between px-6 py-8 md:py-12 relative overflow-hidden bg-[#040814]">
+    <div className="flex-1 flex flex-col justify-between px-6 py-8 md:py-12 relative overflow-hidden bg-[var(--background)]">
       {/* Background Blobs */}
       <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
