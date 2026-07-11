@@ -6,9 +6,8 @@ Built with a robust Python backend (FastAPI, scikit-learn, PyPDF) and a premium 
 
 ---
 
-## 🚀 Live Deployment & Links
+## 🚀 Code Repository
 
-* **Live Application (Production)**: [https://ai-medical-report-analyzer-theta.vercel.app](https://ai-medical-report-analyzer-theta.vercel.app)
 * **GitHub Repository**: [https://github.com/Rohan-R07/Ai-medical-report-analyzer](https://github.com/Rohan-R07/Ai-medical-report-analyzer)
 
 ---
