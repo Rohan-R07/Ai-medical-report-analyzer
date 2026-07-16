@@ -7,6 +7,7 @@ import { FileText, Brain, Salad, Activity, Sparkles, ShieldAlert } from "lucide-
 import UploadCard from "./components/UploadCard";
 import LoadingTimeline from "./components/shared/LoadingTimeline";
 import { analyzeReport } from "./lib/api";
+import HealthcarePartnersLanding from "./components/landing/HealthcarePartnersLanding";
 
 export default function Home() {
   const router = useRouter();
@@ -14,6 +15,13 @@ export default function Home() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isBackendConnected, setIsBackendConnected] = useState<boolean | null>(null);
+  const [hasActiveReport, setHasActiveReport] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem("medicalReportData")) {
+      setHasActiveReport(true);
+    }
+  }, []);
 
   // Periodic health check on backend connection
   useEffect(() => {
@@ -121,22 +129,33 @@ export default function Home() {
             V I T A L I S
           </span>
         </div>
-        {isBackendConnected === true ? (
-          <div className="flex items-center space-x-1.5 text-[9px] bg-emerald-50 text-emerald-700 px-3.5 py-1.5 rounded-full border border-emerald-100 font-bold uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse" />
-            API Connected
-          </div>
-        ) : isBackendConnected === false ? (
-          <div className="flex items-center space-x-1.5 text-[9px] bg-rose-50 text-rose-700 px-3.5 py-1.5 rounded-full border border-rose-100 font-bold uppercase tracking-wider animate-pulse">
-            <span className="w-1.5 h-1.5 bg-rose-600 rounded-full" />
-            Backend Offline
-          </div>
-        ) : (
-          <div className="flex items-center space-x-1.5 text-[9px] bg-slate-100 text-slate-600 px-3.5 py-1.5 rounded-full border border-slate-200/60 font-bold uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" />
-            Checking API
-          </div>
-        )}
+        <div className="flex items-center space-x-3">
+          {hasActiveReport && (
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="text-[9px] font-bold uppercase tracking-wider text-primary hover:text-primary-hover bg-white hover:bg-slate-50 px-3.5 py-1.5 rounded-full border border-primary/20 shadow-sm transition-colors cursor-pointer focus:outline-none"
+            >
+              View Active Report
+            </button>
+          )}
+
+          {isBackendConnected === true ? (
+            <div className="flex items-center space-x-1.5 text-[9px] bg-emerald-50 text-emerald-700 px-3.5 py-1.5 rounded-full border border-emerald-100 font-bold uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse" />
+              API Connected
+            </div>
+          ) : isBackendConnected === false ? (
+            <div className="flex items-center space-x-1.5 text-[9px] bg-rose-50 text-rose-700 px-3.5 py-1.5 rounded-full border border-rose-100 font-bold uppercase tracking-wider animate-pulse">
+              <span className="w-1.5 h-1.5 bg-rose-600 rounded-full" />
+              Backend Offline
+            </div>
+          ) : (
+            <div className="flex items-center space-x-1.5 text-[9px] bg-slate-100 text-slate-600 px-3.5 py-1.5 rounded-full border border-slate-200/60 font-bold uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" />
+              Checking API
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Main Core Section */}
@@ -201,6 +220,9 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+
+              {/* Healthcare Partners Section */}
+              <HealthcarePartnersLanding />
             </motion.div>
           ) : (
             <motion.div

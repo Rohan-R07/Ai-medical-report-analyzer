@@ -9,6 +9,7 @@ import { MedicalReportData } from "../../types";
 interface ReportActionsProps {
   reportData: MedicalReportData;
   onRestoreReport: (data: MedicalReportData) => void;
+  onAnalyzeAnother: () => void;
 }
 
 interface HistoryItem {
@@ -19,7 +20,7 @@ interface HistoryItem {
   data: MedicalReportData;
 }
 
-export default function ReportActions({ reportData, onRestoreReport }: ReportActionsProps) {
+export default function ReportActions({ reportData, onRestoreReport, onAnalyzeAnother }: ReportActionsProps) {
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -118,16 +119,16 @@ export default function ReportActions({ reportData, onRestoreReport }: ReportAct
           className="flex items-center justify-center space-x-2.5 bg-primary hover:bg-primary-hover text-white py-3 px-4 rounded-xl shadow-sm text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 active:scale-98 cursor-pointer"
         >
           <Printer className="w-4 h-4" />
-          <span>Print / Download PDF</span>
+          <span>Download Report PDF</span>
         </button>
 
-        {/* Copy text button */}
+        {/* Analyze Another Report Button */}
         <button
-          onClick={handleCopy}
+          onClick={onAnalyzeAnother}
           className="flex items-center justify-center space-x-2.5 bg-white hover:bg-slate-50 text-slate-700 py-3 px-4 rounded-xl border border-slate-200/80 shadow-sm text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 active:scale-98 cursor-pointer"
         >
-          {copied ? <Check className="w-4 h-4 text-health-optimal" /> : <Clipboard className="w-4 h-4 text-slate-400" />}
-          <span>{copied ? "Copied to Clipboard!" : "Copy Report Text"}</span>
+          <Clipboard className="w-4 h-4 text-slate-400" />
+          <span>Analyze Another Report</span>
         </button>
 
         {/* Share Button */}

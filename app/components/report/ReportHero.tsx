@@ -2,18 +2,19 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Plus } from "lucide-react";
 
 interface ReportHeroProps {
   score: number;
   condition: string;
   severity: string;
   summary: string;
-  onBack: () => void;
+  onHome: () => void;
+  onUpload: () => void;
 }
 
-export default function ReportHero({ score, condition, severity, summary, onBack }: ReportHeroProps) {
-  const radius = 64;
+export default function ReportHero({ score, condition, severity, summary, onHome, onUpload }: ReportHeroProps) {
+  const radius = 58;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
@@ -38,14 +39,24 @@ export default function ReportHero({ score, condition, severity, summary, onBack
       <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Back button and Active status header */}
-      <header className="flex justify-between items-center w-full max-w-4xl mx-auto mb-8 z-10">
-        <button
-          onClick={onBack}
-          className="flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors bg-white hover:bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm"
-        >
-          <ArrowLeft className="w-4 h-4 text-slate-400" />
-          <span>Upload Another Report</span>
-        </button>
+      <header className="flex justify-between items-center w-full max-w-4xl mx-auto mb-8 z-10 gap-4 flex-wrap">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={onHome}
+            className="flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors bg-white hover:bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm focus:outline-none cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-400" />
+            <span>Back to Dashboard</span>
+          </button>
+          
+          <button
+            onClick={onUpload}
+            className="flex items-center space-x-2 text-xs font-semibold text-primary hover:text-primary-hover transition-colors bg-white hover:bg-slate-50 px-4 py-2.5 rounded-xl border border-primary/20 shadow-sm focus:outline-none cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-primary" />
+            <span>Upload Another Report</span>
+          </button>
+        </div>
         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-sm">
           Active Analysis Summary
         </span>
@@ -71,22 +82,22 @@ export default function ReportHero({ score, condition, severity, summary, onBack
       {/* Main Hero block */}
       <div className="max-w-2xl w-full mx-auto flex-1 flex flex-col items-center justify-center text-center space-y-8 my-auto z-10">
         {/* Animated Radial Score Dial */}
-        <div className="relative w-36 h-36 flex items-center justify-center bg-white rounded-full p-2 shadow-sm border border-slate-200/50">
-          <svg className="w-full h-full transform -rotate-90">
+        <div className="relative w-36 h-36 flex items-center justify-center bg-white rounded-full shadow-sm border border-slate-200/50">
+          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 144 144">
             <circle
-              cx="68"
-              cy="68"
+              cx="72"
+              cy="72"
               r={radius}
               className="stroke-slate-100"
-              strokeWidth="7"
+              strokeWidth="8"
               fill="transparent"
             />
             <motion.circle
-              cx="68"
-              cy="68"
+              cx="72"
+              cy="72"
               r={radius}
               className={getScoreColor(score).split(" ")[0]}
-              strokeWidth="7"
+              strokeWidth="8"
               fill="transparent"
               strokeDasharray={circumference}
               initial={{ strokeDashoffset: circumference }}
