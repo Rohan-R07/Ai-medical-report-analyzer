@@ -1,8 +1,12 @@
 export interface AbnormalFinding {
   parameter: string;
   status: string;
+  value: number | string;
   explanation?: string;
   impact?: string;
+  is_mild?: boolean;
+  is_significant?: boolean;
+  is_critical?: boolean;
 }
 
 export interface Specialist {

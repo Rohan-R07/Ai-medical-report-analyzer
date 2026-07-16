@@ -13,11 +13,14 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(os.path.dirname(current_dir), ".env")
 load_dotenv(dotenv_path, override=True)
 
+openrouter_key = os.getenv("OPENROUTER_API_KEY")
 gemini_key = os.getenv("GEMINI_API_KEY")
-if gemini_key:
+if openrouter_key:
+    print(f"INFO: Loaded OPENROUTER_API_KEY successfully (starts with {openrouter_key[:10]}...)")
+elif gemini_key:
     print(f"INFO: Loaded GEMINI_API_KEY successfully (starts with {gemini_key[:10]}...)")
 else:
-    print("WARNING: GEMINI_API_KEY not found in environment!")
+    print("WARNING: Neither OPENROUTER_API_KEY nor GEMINI_API_KEY found in environment!")
 
 import sys
 if current_dir not in sys.path:

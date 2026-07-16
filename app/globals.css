@@ -1,113 +1,103 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #0d9488; /* Clinical Teal */
-  --color-primary-hover: #0f766e;
-  --color-medical-normal: #10b981;
-  --color-medical-warning: #f59e0b;
-  --color-medical-danger: #ef4444;
-  --color-glass-bg: rgba(255, 255, 255, 0.8);
-  --color-glass-border: rgba(13, 148, 136, 0.08);
-  --color-glass-border-hover: rgba(13, 148, 136, 0.18);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
 
-  /* Reverse the slate color scale to transition elements with dark classes to light mode automatically */
-  --color-slate-950: #f8fafc;
-  --color-slate-900: #eef4f8; /* Soft clinical gray-blue */
-  --color-slate-800: #e2eaf0;
-  --color-slate-700: #cbd5e1;
-  --color-slate-600: #94a3b8;
+  --color-primary: #0d9488;
+  --color-primary-hover: #0f766e;
+  --color-primary-light: #f0fdfa;
+  
+  --color-health-optimal: #10b981;
+  --color-health-optimal-light: #f0fdf4;
+  --color-health-warning: #d97706;
+  --color-health-warning-light: #fffbeb;
+  --color-health-danger: #ef4444;
+  --color-health-danger-light: #fef2f2;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
   --color-slate-500: #64748b;
-  --color-slate-400: #475569;
-  --color-slate-300: #334155;
-  --color-slate-200: #1e293b;
-  --color-slate-100: #0f172a;
-  --color-slate-50: #0f172a;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
 }
 
 :root {
-  --background: #f4f8fa; /* Soft clean hospital/laboratory tint */
-  --foreground: #1e293b; /* Readable clinical text color */
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   overflow-x: hidden;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-family: var(--font-sans);
 }
 
-/* Base Headings Override to guarantee contrast on light backgrounds */
-h1, h2, h3, h4, h5, h6,
-.font-heading {
-  color: #0f172a !important;
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--foreground);
 }
 
-/* Glassmorphism Helper Classes (Light Medical Style) */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(13, 148, 136, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(13, 148, 136, 0.04);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Premium Healthcare Card (Tactile Shadow & Spacing) */
+.clinical-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1.5rem;
+  padding: 1.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-panel-hover:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(13, 148, 136, 0.25);
-  box-shadow: 0 0 25px rgba(13, 148, 136, 0.08);
-  transform: translateY(-2px);
+.clinical-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  border-color: #cbd5e1;
 }
 
-/* Background Glowing Blobs */
-.glow-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  z-index: 0;
-  opacity: 0.12; /* Lower opacity for subtle light blobs */
-  pointer-events: none;
-}
-
-/* Keyframes and Animations */
-@keyframes float {
-  0% { transform: translateY(0px) scale(1); }
-  50% { transform: translateY(-10px) scale(1.02); }
-  100% { transform: translateY(0px) scale(1); }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-/* Scrollbar Customization */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f4f8fa;
+  background: #f8fafc;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(13, 148, 136, 0.25);
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(13, 148, 136, 0.45);
+  background: #94a3b8;
 }
 
-/* Text Gradients (Medical Light Blue / Teal) */
-.text-gradient-cyan {
-  background: linear-gradient(135deg, #0d9488 0%, #0284c7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+/* Printing Overrides */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+  }
 
-.text-gradient-emerald {
-  background: linear-gradient(135deg, #0f766e 0%, #047857 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  header, footer, button, .no-print {
+    display: none !important;
+  }
+
+  .clinical-card {
+    border: 1px solid #000000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  .interactive-element {
+    display: none !important;
+  }
 }
