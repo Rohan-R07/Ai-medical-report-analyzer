@@ -85,6 +85,7 @@ class AIProvider:
         """
         Generates clinical lifestyle recommendations using Gemma model on OpenRouter.
         Includes exponential backoff retries and JSON verification/repair.
+        """
         if not self.api_key:
             logger.warning("No API key configured. Returning default clinical recommendations.")
             return json.dumps(DEFAULT_RESPONSE)
