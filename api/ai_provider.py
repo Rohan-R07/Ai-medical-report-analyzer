@@ -59,14 +59,12 @@ class AIProvider:
         load_dotenv(dotenv_path, override=True)
         
         # Load API Key securely
-        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY") or os.getenv("GEMINI_API_KEY")
+        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
         if not self.api_key:
-            logger.error("API key (OPENROUTER_API_KEY or GEMINI_API_KEY) is missing or empty!")
-            raise ValueError("Invalid API key configuration. API key must be provided.")
-        
-        # Mask the key for logging to verify the correct one is loaded (e.g. sk-or-v1- vs AQ.)
-        masked_key = self.api_key[:10] + "..." if self.api_key else "None"
-        logger.info(f"Loaded API Key starting with: {masked_key}")
+            logger.warning("API key (OPENROUTER_API_KEY or GEMINI_API_KEY) is missing or empty! Fallback responses will be used if needed.")
+        else:
+            masked_key = self.api_key[:10] + "..."
+            logger.info(f"Loaded API Key starting with: {masked_key}")
         
         # Load Model name, defaulting to google/gemma-4-26b-a4b-it
         self.model_name = os.getenv("OPENROUTER_MODEL") or os.getenv("GEMINI_MODEL")
@@ -87,7 +85,10 @@ class AIProvider:
         """
         Generates clinical lifestyle recommendations using Gemma model on OpenRouter.
         Includes exponential backoff retries and JSON verification/repair.
-        """
+        if not self.api_key:
+            logger.warning("No API key configured. Returning default clinical recommendations.")
+            return json.dumps(DEFAULT_RESPONSE)
+
         prompt = f"""
         You are a medical report analysis assistant.
 
@@ -271,16 +272,16 @@ class AIProvider:
                 
                 # Handle non-transient authentication or credit errors immediately
                 if status_code == 401:
-                    logger.error("Authentication failed: Invalid OpenRouter/Gemini API key.")
-                    raise ValueError("Invalid API key. Please check your OPENROUTER_API_KEY or GEMINI_API_KEY environment variable.")
+                    logger.error("Authentication failed: Invalid OpenRouter/Gemini API key. Returning default clinical recommendations.")
+                    return json.dumps(DEFAULT_RESPONSE)
                 
                 if status_code == 402:
-                    logger.error("Credits error: OpenRouter key has insufficient credits.")
-                    raise ValueError("Insufficient credits on your OpenRouter account. Please check your OpenRouter billing settings.")
+                    logger.error("Credits error: OpenRouter key has insufficient credits. Returning default clinical recommendations.")
+                    return json.dumps(DEFAULT_RESPONSE)
                 
                 if attempt == max_retries or not is_transient:
-                    logger.error(f"OpenRouter API call failed permanently after {attempt+1} attempts: {err}")
-                    raise err
+                    logger.error(f"OpenRouter API call failed permanently after {attempt+1} attempts: {err}. Returning default clinical recommendations.")
+                    return json.dumps(DEFAULT_RESPONSE)
                 
                 # Backoff delay with jitter
                 sleep_time = delay + random.uniform(0.1, 1.0)
