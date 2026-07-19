@@ -19,31 +19,40 @@ logger = logging.getLogger("medical_report_analyzer")
 # Alias mapping for CBC parameters (sorted from longest to shortest within lists)
 ALIAS_MAP = {
     "WBC": [
-        "white blood cell count", "white blood cells", "total wbc count",
-        "total wbc", "wbc count", "wbc"
+        "total leucocyte count (tlc)", "total leucocyte count (wbc)",
+        "total leucocyte count", "total leukocyte count", "total leucocytes",
+        "total leukocytes", "white blood cell count", "white blood cells",
+        "total wbc count", "total wbc", "wbc count", "leucocyte count",
+        "leukocyte count", "tlc", "wbc"
     ],
     "RBC": [
         "red blood cell count", "red blood cells", "total rbc count",
-        "total rbc", "rbc count", "rbc"
+        "total rbc", "rbc count", "total red cells", "red cell count", "rbc"
     ],
     "HGB": [
-        "haemoglobin", "hemoglobin", "hgb", "hb"
+        "haemoglobin", "hemoglobin (hb)", "hemoglobin", "hgb", "hb"
     ],
     "HCT": [
-        "packed cell volume", "hematocrit", "haematocrit", "pcv", "hct"
+        "packed cell volume (pcv)", "packed cell, volume", "packed cell volume",
+        "hematocrit (pcv)", "haematocrit (pcv)", "hematocrit", "haematocrit", "pcv", "hct"
     ],
     "MCV": [
-        "mean corpuscular volume", "mcv"
+        "mean corpuscular volume (mcv)", "mean corpuscular volume", "mcv"
     ],
     "MCH": [
+        "mean corpuscular hemoglobin (mch)", "mean corpuscular haemoglobin (mch)",
+        "mean corp. hemoglobin (mch)", "mean corp hemoglobin (mch)",
+        "mean corp. hemoglobin", "mean corp hemoglobin",
         "mean corpuscular hemoglobin", "mean corpuscular haemoglobin", "mch"
     ],
     "MCHC": [
+        "mch concentration (mchc)", "mean corpuscular hemoglobin concentration (mchc)",
+        "mean corpuscular haemoglobin concentration (mchc)",
         "mean corpuscular hemoglobin concentration", 
-        "mean corpuscular haemoglobin concentration", "mchc"
+        "mean corpuscular haemoglobin concentration", "mch concentration", "mchc"
     ],
     "PLT": [
-        "platelet count", "platelets", "plt"
+        "total platelet count", "platelet count", "platelets", "plt"
     ]
 }
 
@@ -172,9 +181,20 @@ def extract_parameters_via_vision(pdf_file):
         )
 
         prompt = (
-            "Extract all Complete Blood Count (CBC) parameter values from this laboratory report image. "
-            "Focus on finding numeric values for: WBC, RBC, HGB, HCT, MCV, MCH, MCHC, PLT. "
-            "Return ONLY a valid JSON object mapping parameter names to numbers, e.g. "
+            "Extract the most recent Complete Blood Count (CBC) parameter values from this laboratory report image. "
+            "Look for values of these 8 metrics:\n"
+            "- WBC (Total Leucocyte Count / TLC / White Blood Cells)\n"
+            "- RBC (Total RBC count / Red Blood Cells)\n"
+            "- HGB (Hemoglobin / Hb / Haemoglobin)\n"
+            "- HCT (PCV / Packed Cell Volume / Hematocrit)\n"
+            "- MCV (Mean Corpuscular Volume)\n"
+            "- MCH (Mean Corpuscular Hemoglobin / Mean Corp. Hemoglobin)\n"
+            "- MCHC (MCH Concentration / Mean Corpuscular Hemoglobin Concentration)\n"
+            "- PLT (Platelet Count)\n\n"
+            "Important Rules:\n"
+            "1. If the report displays multiple test date columns (historical monitoring), extract values ONLY from the first/most recent result column.\n"
+            "2. Convert formatted numbers (e.g. 10,000 cumm for WBC -> 10.0, or 20,000 cumm for PLT -> 20.0 or 200.0) into standard CBC floats.\n"
+            "3. Return ONLY a valid JSON object mapping parameter names to numbers, e.g. "
             '{"WBC": 7.0, "RBC": 5.0, "HGB": 14.5, "HCT": 42.0, "MCV": 90.0, "MCH": 30.0, "MCHC": 33.0, "PLT": 250.0}.'
         )
 
