@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Brain, Salad, Activity, Sparkles, ShieldAlert } from "lucide-react";
 import UploadCard from "./components/UploadCard";
 import LoadingTimeline from "./components/shared/LoadingTimeline";
-import { analyzeReport } from "./lib/api";
+import { analyzeReport, getApiBaseUrl } from "./lib/api";
 import HealthcarePartnersLanding from "./components/landing/HealthcarePartnersLanding";
 
 export default function Home() {
@@ -25,7 +25,7 @@ export default function Home() {
 
   // Periodic health check on backend connection
   useEffect(() => {
-    const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+    const API_BASE_URL = getApiBaseUrl();
     
     const checkConnection = async () => {
       try {

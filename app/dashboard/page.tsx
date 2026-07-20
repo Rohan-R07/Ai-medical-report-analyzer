@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { MedicalReportData, normalizeReportData } from "../types";
-import { analyzeReport } from "../lib/api";
+import { analyzeReport, getApiBaseUrl } from "../lib/api";
 
 // Import components
 import ReportHero from "../components/report/ReportHero";
@@ -47,7 +47,7 @@ export default function Dashboard() {
 
   // Periodic health check on backend connection (for UploadModal)
   useEffect(() => {
-    const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+    const API_BASE_URL = getApiBaseUrl();
     
     const checkConnection = async () => {
       try {
